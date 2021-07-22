@@ -26,7 +26,7 @@ datasets.each { dataSet ->
         dest pathToTempFolder
         overwrite true
         doLast {
-            println "Files downloaded to: " + pathToTempFolder
+            println "File downloaded to: " + pathToTempFolder
         }
     }
 
