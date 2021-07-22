@@ -14,7 +14,6 @@ def pathToTempFolder = System.getProperty("java.io.tmpdir")
 def pathToUnzipFolder = Paths.get(pathToTempFolder, "unzip_data")
 
 def pathToDataZip = Paths.get(pathToTempFolder, "ch.so.agi.av_gb_administrative_einteilungen_xtf.zip")
-def plzXtfFilePath = Paths.get(pathToUnzipFolder.toString(), 'PLZO_INTERLIS_LV95', 'PLZO_ITF_LV95.itf')
 
 def dbschemas = ["live"]
 
