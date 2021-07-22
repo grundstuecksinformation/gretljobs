@@ -8,193 +8,64 @@ import ch.so.agi.gretl.api.*
 import java.nio.file.Paths
 import de.undercouch.gradle.tasks.download.Download
 
-//defaultTasks "importData"
+defaultTasks "importData"
 
 def pathToTempFolder = System.getProperty("java.io.tmpdir")
 def pathToUnzipFolder = Paths.get(pathToTempFolder, "unzip_data")
 
+def dbschemas = ["live"]
+
 def baseUrl = "https://s3.eu-central-1.amazonaws.com/ch.so.agi.av.dm01avch24lv95d/"
 //def datasets = [2401,2402,2403,2404,2405,2406,2407,2408,2421,2422,2424,2425,2426,2427,2428,2430,2445,2455,2456,2457,2461,2463,2464,2465,2471,2472,2473,2474,2475,2476,2477,2478,2479,2480,2481,2491,2492,2493,2495,2497,2499,2500,2501,2502,2503,2511,2513,2514,2516,2517,2518,2519,2520,2523,2524,2525,2526,2527,2528,2529,2530,2532,2534,2535,2541,2542,2543,2544,2545,2546,2547,2548,2549,2550,2551,2553,2554,2555,2556,2571,2572,2573,2574,2575,2576,2578,2579,2580,2581,2582,2583,2584,2585,2586,2601,2611,2612,2613,2614,2616,2617,2618,2619,2620,2621,2622]
-def datasets = [2401,2402]
+//def datasets = [2401,2402]
+def datasets = [2549]
 
-datasets.each { dataset ->
-    tasks.register("downloadDataset_$dataset", Download) {
-        src baseUrl + dataset.toString() + "00.itf.zip"
+datasets.each { dataSet ->
+    tasks.register("downloadDataset_$dataSet", Download) {
+        src baseUrl + dataSet.toString() + "00.itf.zip"
         dest pathToTempFolder
         overwrite true
         doLast {
             println "Files downloaded to: " + pathToTempFolder
         }
     }
-}
 
-tasks.register("fubar") {
-    description = "Aggregation task."
-    dependsOn {
-        tasks.findAll { task -> task.name.startsWith('downloadDataset_') }
+    tasks.register("unzipFile_$dataSet", Copy) {
+        dependsOn tasks.named("downloadDataset_$dataSet")
+        from zipTree(Paths.get(pathToTempFolder, dataSet + "00.itf.zip"))
+        into file(pathToUnzipFolder)
+        doLast {
+            println "File unzipped to: " + pathToUnzipFolder
+        }
+    }
+
+    dbschemas.each { dbSchema -> 
+        tasks.register("importData_$dataSet\_$dbSchema", Ili2pgReplace) {
+            dependsOn tasks.named("unzipFile_$dataSet")
+            //dependsOn ("unzipFile_$dataSet")
+            database {
+                uri = dbUriOereb
+                user = dbUserOereb
+                password = dbPwdOereb
+            }
+            dbschema = dbSchema
+            models = "DM01AVCH24LV95D"
+            /*
+            def inputFile = file(Paths.get(pathToUnzipFolder.toString(), dataSet + "00.itf"))
+            dataFile = inputFile
+            */
+            dataFile = file(Paths.get(pathToUnzipFolder.toString(), dataSet + "00.itf"))
+            //dataFile = Paths.get(tasks.("unzipFile_$dataSet").destinationDir.getAbsolutePath(), dataSet + "00.itf")
+            dataset = dataSet.toString() // muss String sein
+            disableValidation = true
+
+        }
     }
 }
 
-
-
-//242100.itf.zip"
-
-
-// def foo = 'a'
-
-// def property = objects.property(String)
-// def dbProperty = objects.property(Connector)
-// //property.set("arsch")
-
-// tasks.register('fubar') {
-//     doLast {
-//         println foo
-//         foo = 'b'
-//         println foo
-//         property.set("lulatsch")
-//     }
-// }
-
-// /*
-// task importData() {
-//     doLast {
-//         println foo
-//     }
-// }
-// */
-
-// tasks.register('validateData', IliValidator) {
-//     models = "DM01AVSO24LV95"
-//     //dataFiles = ["/Users/stefan/Downloads/254900.itf"]
-//     //logFile = file("/Users/stefan/Downloads/ilivalidator.log")
-//     dataFiles = fileTree("/Users/stefan/Downloads/").matching {
-//     	include "*.itf"
-//     }
-// }
-
-// tasks.register('importData', Ili2pgImport) {
-//     //database.uri="jdbc:postgresql://localhost:54321/edit"
-//     //database.user="gretl"
-//     database {
-//         uri = "jdbc:postgresql://localhost:54321/edit"
-//         user = "gretl"
-//         password = "gretl"
-//     }
-//     dbschema = "agi_dm01avso24"
-//     models = "DM01AVSO24LV95"
-//     dataFile = "/Users/stefan/Downloads/252400.itf"
-//     //dataFile = fileTree("/Users/stefan/Downloads/itf/.").matching {
-//     //    include "*.itf"
-//     //}
-
-//     dataset = "2524"
-//     disableValidation = true
-//     //datasetSubstring = objects.listProperty(Range).set(0..4)
-//     //datasetSubstring = 0..4
-// }
-
-// tasks.register('replaceData', Ili2pgReplace) {
-//     database {
-//         uri = "jdbc:postgresql://localhost:54321/edit"
-//         user = "gretl"
-//         password = "gretl"
-//     }
-//     dbschema = "agi_dm01avso24"
-//     models = "DM01AVSO24LV95"
-//     dataFile = "/Users/stefan/Downloads/252400.itf"
-//     dataFile = fileTree("/Users/stefan/Downloads/itf/.").matching {
-//         include "*.itf"
-//     }
-
-//     dataset = dataFile
-//     disableValidation = true
-//     datasetSubstring = 0..4
-// }
-
-// tasks.register('exportData', Ili2pgExport) {  
-//     database {
-//         uri = "jdbc:postgresql://localhost:54321/edit"
-//         user = "gretl"
-//         password = "gretl"
-//     }
-//     dbschema = "agi_dm01avso24"
-//     models = "DM01AVSO24LV95"
-//     dataFile = "/Users/stefan/Downloads/252400_export.itf"
-//     //dataset = "2524"
-//     disableValidation = true
-// }
-
-// tasks.register('deleteData', Ili2pgDelete) {  
-//     database {
-//         uri = "jdbc:postgresql://localhost:54321/edit"
-//         user = "gretl"
-//         password = "gretl"
-//     }
-//     dbschema = "agi_dm01avso24"
-//     models = "DM01AVSO24LV95"
-//     dataset = "2524"
-//     failOnException = false
-// }
-
-// tasks.register('createSchema', Ili2pgImportSchema) {  
-//     /*
-//     database {
-//         uri = "jdbc:postgresql://localhost:54321/edit"
-//         user = "gretl"
-//         password = "gretl"
-//     }
-//     */
-
-//     dbschema = "agi_dm01avso24"
-//     models = "DM01AVSO24LV95"
-//     defaultSrsCode = "2056"
-//     createGeomIdx = true
-//     createFkIdx = true
-//     createEnumTabs = true
-//     beautifyEnumDispName = true
-//     createMetaInfo = true
-//     createNumChecks = true
-//     nameByTopic = true
-//     strokeArcs = true
-//     createBasketCol = true
-//     createDatasetCol = true
-//     createImportTabs = true
-//     createscript = file("/Users/stefan/Downloads/fubar.sql")
-// }
-
-// tasks.register('transferSomeData', Db2Db) {
-//     sourceDb {
-//         uri = "jdbc:postgresql://localhost:54321/edit"
-//         user = "gretl"
-//         password = "gretl"
-//     }
-//     targetDb {
-//         uri = "jdbc:postgresql://localhost:54321/edit"
-//         user = "gretl"
-//         password = "gretl"
-//     }
-//     sqlParameters = [mySchema:'agi_dm01avso24']
-//     transferSets = [
-//         new TransferSet('foo.sql', 'agi_dm01avso24_sink.fixpunktekatgrie3_lfp3nachfuehrung', true),
-//     ];
-// }
-
-// tasks.register('executeSomeSql', SqlExecutor) {
-//     database {
-//         uri = "jdbc:postgresql://localhost:54321/edit"
-//         user = "gretl"
-//         password = "gretl"
-//     }
-//     sqlFiles = ['demo.sql']
-// }
-
-// tasks.register('downloadFileFromS3', S3Download) {
-//     accessKey = "xxx"
-//     secretKey = "yyy"
-//     downloadDir = file(".")
-//     bucketName = "ch.so.agi.geodata"
-//     key = "ch.so.agi.av_gb_administrative_einteilungen_xtf.zip"
-//     //endPoint = "https://s3.eu-central-1.amazonaws.com" 
-//     //region = "eu-central-1"
-
-// }
+tasks.register("importData") {
+    description = "Aggregation task."
+    dependsOn {
+        tasks.findAll { task -> task.name.startsWith('importData_') }
+    }
+}

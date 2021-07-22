@@ -1,7 +1,8 @@
 settingsEvaluated { settings ->
     settings.pluginManagement {
         plugins {
-            id "ch.so.agi.gretl" version "latest.integration"
+            //id "ch.so.agi.gretl" version "latest.integration"
+            id "ch.so.agi.gretl" version "2.9999.LOCALBUILD"
             id "de.undercouch.download" version "4.1.2"
         }
         repositories {
