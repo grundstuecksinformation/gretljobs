@@ -13,15 +13,19 @@ defaultTasks "importData"
 def pathToTempFolder = System.getProperty("java.io.tmpdir")
 def pathToUnzipFolder = Paths.get(pathToTempFolder, "unzip_data")
 
-def pathToPlzDataZip = Paths.get(pathToTempFolder, "PLZO_INTERLIS_LV95.zip")
+def pathToDataZip = Paths.get(pathToTempFolder, "ch.so.agi.av_gb_administrative_einteilungen_xtf.zip")
 def plzXtfFilePath = Paths.get(pathToUnzipFolder.toString(), 'PLZO_INTERLIS_LV95', 'PLZO_ITF_LV95.itf')
 
 def dbschemas = ["live"]
 
-tasks.register("downloadData", Download) {
-    src 'http://data.geo.admin.ch/ch.swisstopo-vd.ortschaftenverzeichnis_plz/PLZO_INTERLIS_LV95.zip'
-    dest pathToTempFolder
-    overwrite true
+tasks.register("downloadData", S3Download) {
+    accessKey = awsAccessKeyAgi
+    secretKey = awsSecretAccessKeyAgi
+    downloadDir = file(pathToTempFolder)
+    bucketName = "ch.so.agi.geodata"
+    key = "ch.so.agi.av_gb_administrative_einteilungen_xtf.zip"
+    endPoint = "https://s3.eu-central-1.amazonaws.com" 
+    region = "eu-central-1"
 
     doLast {
         println "File downloaded to: " + pathToTempFolder
@@ -30,9 +34,9 @@ tasks.register("downloadData", Download) {
 
 tasks.register("unzipData", Copy) {
     dependsOn tasks.named("downloadData")
-    from zipTree(pathToPlzDataZip)
+    from zipTree(pathToDataZip)
     into file(pathToUnzipFolder)
-    include "**/*.itf"
+    include "**/*.xtf"
 
     doLast {
         println "File unzipped to directory: " + pathToUnzipFolder
@@ -48,9 +52,9 @@ dbschemas.each { dbSchema ->
             password = dbPwdOereb
         }
         dbschema = dbSchema
-        models = "PLZOCH1LV95D"
-        dataFile = file(plzXtfFilePath)
-        dataset = 'ch.swisstopo.plzortschaft'
+        models = "SO_AGI_AV_GB_Administrative_Einteilungen_Publikation_20180822"
+        dataFile = file(Paths.get(pathToUnzipFolder.toString(), "ch.so.agi.av_gb_administrative_einteilungen.xtf"))
+        dataset = 'ch.so.agi.av-gb-administrative-einteilung'
         disableValidation = true
 
     }
