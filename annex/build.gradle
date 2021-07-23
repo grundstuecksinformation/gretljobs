@@ -1,0 +1,72 @@
+plugins {
+    id 'ch.so.agi.gretl'
+    id 'de.undercouch.download'
+}
+
+import ch.so.agi.gretl.tasks.*
+import ch.so.agi.gretl.api.*
+import java.nio.file.Paths
+import de.undercouch.gradle.tasks.download.Download
+
+defaultTasks "importData"
+
+def pathToTempFolder = System.getProperty("java.io.tmpdir")
+def pathToUnzipFolder = Paths.get(pathToTempFolder, "unzip_data")
+
+def annexDataFileName = "ch.so.agi.OeREB_extractAnnex.oereb_xtf.zip"
+def annexDataUrl = "https://s3.eu-central-1.amazonaws.com/ch.so.agi.geodata/" + annexDataFileName
+def annexDataSet = "ch.so.agi.OeREB_extractAnnex"
+
+/*
+def pathToTempFolder = System.getProperty("java.io.tmpdir")
+def iliModelAnnex = "OeREB_ExtractAnnex_V1_0"
+ 
+def annexBaseUrl = "https://geo.so.ch/geodata/ch.so.agi.extractannex.oereb/"
+def annexDataSet = "ch.so.agi.OeREB_extractAnnex"
+*/
+
+def dbSchemas = ["live"]
+
+tasks.register("downloadData", Download) {
+    src annexDataUrl
+    dest pathToTempFolder
+    overwrite true
+
+    doLast {
+        println "File downloaded to: " + pathToTempFolder
+    }
+}
+
+tasks.register("unzipData", Copy) {
+    dependsOn tasks.named("downloadData")
+    from zipTree(Paths.get(pathToTempFolder, annexDataFileName))
+    into file(pathToUnzipFolder)
+    include "**/*.xtf"
+
+    doLast {
+        println "File unzipped to directory: " + pathToUnzipFolder
+    }    
+}
+
+dbSchemas.each { dbSchema ->
+    tasks.register("importData_$dbSchema", Ili2pgReplace) {
+        dependsOn tasks.named("unzipData")
+        database {
+            uri = dbUriOereb
+            user = dbUserOereb
+            password = dbPwdOereb
+        }
+        dbschema = dbSchema
+        models = "OeREB_ExtractAnnex_V1_0"
+        dataFile = file(Paths.get(pathToUnzipFolder.toString(), "ch.so.agi.OeREB_extractAnnex.oereb.xtf"))
+        dataset = annexDataSet
+        disableValidation = true
+    }
+}
+
+tasks.register("importData") {
+    description = "Aggregation task."
+    dependsOn {
+        tasks.findAll { task -> task.name.startsWith('importData_') }
+    }
+}
